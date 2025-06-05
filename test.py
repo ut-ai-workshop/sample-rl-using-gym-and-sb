@@ -173,7 +173,7 @@ class Tester:
             result = self.run_episode(
                 model,
                 base_env,
-                deterministic=True,
+                deterministic=False,
                 verbose=True,
             )
             results.append(result)

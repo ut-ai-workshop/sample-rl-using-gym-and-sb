@@ -59,7 +59,7 @@ class ParallelTrainer:
             log_path=f"{self._log_dir}/results",
             eval_freq=n_eval_freq // n_train_envs,  # 並列数で割る
             n_eval_episodes=n_eval_episodes,
-            deterministic=True,
+            deterministic=False,
             render=False,
         )
         return eval_callback
