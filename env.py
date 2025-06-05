@@ -5,34 +5,33 @@ import gymnasium as gym
 from gymnasium import spaces
 
 
-class OneMaxEnv(gym.Env):
+class Sudoku1dEnv(gym.Env):
     """
-    One Max問題: n次元のバイナリベクトルで1の数を最大化する
-    行動: 各ビット位置をフリップ (0→1 または 1→0)
+    1次元数独問題: n個の位置に1からnまでの数字を重複なく配置する
+    行動: 各位置の数字を次の値にサイクリックに変更 (0→1→2→...→n→0)
+    0は空白を意味する
     """
 
-    def __init__(self, n_bits: int, initial_ones_ratio: float, n_max_steps: int):
+    def __init__(self, n_size: int, n_max_steps: int):
         """
-        One Max環境の初期化
+        1次元数独環境の初期化
 
         Args:
-            n_bits (int): ビット数
-            initial_ones_ratio (float): 初期状態での1の比率
+            n_size (int): 数独のサイズ（1からn_sizeまでの数字を使用、0は空白）
             n_max_steps (int): 最大ステップ数
         """
         super().__init__()
-        self.n_bits = n_bits
-        self.initial_ones_ratio = initial_ones_ratio
+        self.n_size = n_size
         self.n_max_steps = n_max_steps
 
         self.step_count = 0
-        self.bits = np.zeros(n_bits, dtype=np.int32)
-        self.initial_bits = deepcopy(self.bits)
+        self.numbers = np.zeros(n_size, dtype=np.int32)
+        self.initial_numbers = deepcopy(self.numbers)
 
-        # 行動空間: n_bitsのビット位置
-        self.action_space = spaces.Discrete(n_bits)
-        # 観測空間: バイナリベクトル
-        self.observation_space = spaces.Box(low=0, high=1, shape=(n_bits,), dtype=np.float32)
+        # 行動空間: n_sizeの位置
+        self.action_space = spaces.Discrete(n_size)
+        # 観測空間: 0からn_sizeまでの整数値（0は空白）
+        self.observation_space = spaces.Box(low=0, high=n_size, shape=(n_size,), dtype=np.int32)
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         """
@@ -50,11 +49,11 @@ class OneMaxEnv(gym.Env):
         # ステップ数をリセット
         self.step_count = 0
 
-        # 初期状態をランダムに生成
-        self.bits = np.random.choice([0, 1], size=self.n_bits, p=[1 - self.initial_ones_ratio, self.initial_ones_ratio])
-        self.initial_bits = deepcopy(self.bits)
+        # 初期状態をランダムに生成（0からn_sizeまでの数字をランダムに配置、0は空白）
+        self.numbers = np.random.randint(0, self.n_size + 1, size=self.n_size, dtype=np.int32)
+        self.initial_numbers = deepcopy(self.numbers)
 
-        obs = self.bits.astype(np.float32)
+        obs = self.numbers.copy()
         return obs, {}
 
     def step(self, action: int):
@@ -62,7 +61,7 @@ class OneMaxEnv(gym.Env):
         1ステップの実行
 
         Args:
-            action (int): 実行するアクション
+            action (int): 実行するアクション（変更する位置）
 
         Returns:
             tuple[np.ndarray, float, bool, bool, dict]: 観測, 報酬, 終了, 切り捨て, 情報
@@ -72,11 +71,8 @@ class OneMaxEnv(gym.Env):
         truncated = False
         self.step_count += 1
 
-        # アクションを実行
-        if self.bits[action] == 0:
-            self.bits[action] = 1
-        else:
-            self.bits[action] = 0
+        # アクションを実行: 指定位置の数字をサイクリックに変更 (0→1→...→n→0)
+        self.numbers[action] = (self.numbers[action] + 1) % (self.n_size + 1)
 
         # アクションの実行結果を評価
         if self.check_is_completed():
@@ -87,31 +83,68 @@ class OneMaxEnv(gym.Env):
             # ステップ上限に達した場合、エピソード終了
             terminated = True
 
-        obs = self.bits.astype(np.float32)
+        obs = self.numbers.copy()
         return obs, reward, terminated, truncated, {}
 
     def render(self):
         """
         現在の状態を表示
         """
-        ones_count = np.sum(self.bits)
-        print(f"Step {self.step_count}: [{','.join(map(str, self.bits))}]")
-        print(f"Ones: {ones_count}/{self.n_bits} ({ones_count/self.n_bits:.2%})")
+        unique_count = self._count_unique_numbers()
+        duplicates = self._get_duplicates()
+        missing = self._get_missing_numbers()
+        print(f"Step {self.step_count}: [{','.join(map(str, self.numbers))}]")
+        print(f"Unique numbers: {unique_count}/{self.n_size}")
+        if duplicates:
+            print(f"Duplicates: {duplicates}")
+            print(f"Missing: {missing}")
 
     def get_progress(self):
         """
-        完了した割合を返す（1の数の割合）
+        完了した割合を返す（重複のない数字の割合）
 
         Returns:
             float: 完了した割合 (0~100)
         """
-        return np.sum(self.bits) / self.n_bits * 100
+        return self._count_unique_numbers() / self.n_size * 100
 
     def check_is_completed(self):
         """
-        完了したかチェック（すべて1になったか）
+        完了したかチェック（1からn_sizeまでの数字が重複なく配置されているか）
 
         Returns:
             bool: 完了したかどうか
         """
-        return np.all(self.bits == 1)
+        return len(np.unique(self.numbers)) == self.n_size and np.min(self.numbers) == 1 and np.max(self.numbers) == self.n_size
+
+    def _count_unique_numbers(self):
+        """
+        重複のない数字の数を数える
+
+        Returns:
+            int: 重複のない数字の数
+        """
+        return len(np.unique(self.numbers))
+
+    def _get_duplicates(self):
+        """
+        重複している数字のリストを取得
+
+        Returns:
+            list: 重複している数字のリスト
+        """
+        unique, counts = np.unique(self.numbers, return_counts=True)
+        duplicates = unique[counts > 1]
+        return duplicates.tolist()
+
+    def _get_missing_numbers(self):
+        """
+        不足している数字のリストを取得
+
+        Returns:
+            list: 1からn_sizeの中で配置されていない数字のリスト
+        """
+        all_numbers = set(range(1, self.n_size + 1))
+        current_numbers = set(self.numbers)
+        missing = list(all_numbers - current_numbers)
+        return sorted(missing)

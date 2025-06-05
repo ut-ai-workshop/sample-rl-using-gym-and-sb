@@ -1,27 +1,25 @@
 import numpy as np
 
-from env import OneMaxEnv
+from env import Sudoku1dEnv
 
 
-class MaskOneMaxEnv(OneMaxEnv):
+class MaskSudoku1dEnv(Sudoku1dEnv):
     """
-    マスク付きOne Max環境
-    すでに1のビットはフリップしない（1の数を減らさない）制約を追加
+    マスク付き数独環境
+    初期状態で配置されている数字は変更できない制約
     """
 
-    def __init__(self, n_bits: int, initial_ones_ratio: float, n_max_steps: int, enable_mask: bool = True):
+    def __init__(self, n_size: int, n_max_steps: int, enable_mask: bool = True):
         """
         マスク付きOne Max環境の初期化
 
         Args:
-            n_bits (int): ビット数
-            initial_ones_ratio (float): 初期状態での1の比率
+            n_size (int): 数独のサイズ（1からn_sizeまでの数字を使用、0は空白）
             n_max_steps (int): 最大ステップ数
             enable_mask (bool): マスクを有効にするか
         """
         super().__init__(
-            n_bits,
-            initial_ones_ratio,
+            n_size,
             n_max_steps,
         )
         self.enable_mask = enable_mask  # マスクを有効にするか
@@ -34,11 +32,11 @@ class MaskOneMaxEnv(OneMaxEnv):
             np.ndarray: 行動マスク
         """
         # すべての行動を許可
-        action_mask = np.ones(self.n_bits, dtype=bool)
+        action_mask = np.ones(self.n_size, dtype=bool)
 
         if self.enable_mask:
-            # 1→0への変更を禁止
-            action_mask[self.initial_bits == 1] = False
+            # 0以外の数字は変更できない
+            action_mask[self.initial_numbers != 0] = False
 
         return action_mask
 

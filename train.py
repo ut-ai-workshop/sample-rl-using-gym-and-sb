@@ -7,7 +7,7 @@ from sb3_contrib.common.maskable.callbacks import MaskableEvalCallback
 from sb3_contrib import MaskablePPO
 from sb3_contrib.common.wrappers import ActionMasker
 
-from mask_env import MaskOneMaxEnv
+from mask_env import MaskSudoku1dEnv
 from settings import Settings
 
 
@@ -57,7 +57,7 @@ class Trainer:
             log_path=f"{self._log_dir}/results",
             eval_freq=n_eval_freq,
             n_eval_episodes=n_eval_episodes,
-            deterministic=True,
+            deterministic=False,
             render=False,
         )
         return eval_callback
@@ -114,9 +114,8 @@ class Trainer:
 if __name__ == "__main__":
     # 環境設定
     def env_func() -> ActionMasker:
-        env = MaskOneMaxEnv(
-            n_bits=Settings.N_BITS,
-            initial_ones_ratio=Settings.INITIAL_ONES_RATIO,
+        env = MaskSudoku1dEnv(
+            n_size=Settings.N_SIZE,
             n_max_steps=Settings.N_MAX_STEPS,
             enable_mask=Settings.ENABLE_MASK,
         )
