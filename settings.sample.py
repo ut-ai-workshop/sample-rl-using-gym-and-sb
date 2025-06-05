@@ -10,7 +10,7 @@ class Settings:
     # 訓練設定
     N_TRAIN_STEPS = 10_000
     N_MAX_STEPS = N_BITS * 2  # 1エピソードの最大ステップ数
-    N_TRAIN_ENVS = 32  # 訓練用環境数
+    N_TRAIN_ENVS = 16  # 訓練用環境数
     N_EVAL_ENVS = 8  # 評価用環境数
     N_EVAL_FREQ = 2000
     N_EVAL_EPISODES = 5
