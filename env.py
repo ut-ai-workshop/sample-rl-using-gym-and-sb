@@ -79,7 +79,8 @@ class Sudoku1dEnv(gym.Env):
             terminated = True
             reward += 10.0
         elif self.step_count >= self.n_max_steps:
-            # ステップ上限に達した場合、エピソード終了
+            # ステップ上限に達した場合、達成度に応じた報酬を与え、エピソード終了
+            reward += 10 - len(self._get_missing_numbers())
             terminated = True
 
         obs = self.numbers.copy()
