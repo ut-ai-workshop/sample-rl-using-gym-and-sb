@@ -12,20 +12,22 @@ class Sudoku1dEnv(gym.Env):
     0は空白を意味する
     """
 
-    def __init__(self, n_size: int, n_max_steps: int):
+    def __init__(self, n_size: int, n_blanks: int, n_max_steps: int):
         """
         1次元数独環境の初期化
 
         Args:
             n_size (int): 数独のサイズ（1からn_sizeまでの数字を使用、0は空白）
+            n_blanks (int): 初期状態で作る空白マスの数
             n_max_steps (int): 最大ステップ数
         """
         super().__init__()
         self.n_size = n_size
         self.n_max_steps = n_max_steps
+        self.n_blanks = n_blanks
 
         self.step_count = 0
-        self.numbers = np.zeros(n_size, dtype=np.int32)
+        self.numbers = self._create_puzzle()
         self.initial_numbers = deepcopy(self.numbers)
 
         # 行動空間: n_sizeの位置
@@ -46,11 +48,8 @@ class Sudoku1dEnv(gym.Env):
         """
         super().reset(seed=seed)
 
-        # ステップ数をリセット
         self.step_count = 0
-
-        # 初期状態をランダムに生成（0からn_sizeまでの数字をランダムに配置、0は空白）
-        self.numbers = np.random.randint(0, self.n_size + 1, size=self.n_size, dtype=np.int32)
+        self.numbers = self._create_puzzle()
         self.initial_numbers = deepcopy(self.numbers)
 
         obs = self.numbers.copy()
@@ -148,3 +147,25 @@ class Sudoku1dEnv(gym.Env):
         current_numbers = set(self.numbers)
         missing = list(all_numbers - current_numbers)
         return sorted(missing)
+
+    def _create_puzzle(self):
+        """
+        数独問題を作成
+        """
+        puzzle = self._create_solution()
+
+        # 指定された数の位置をランダムに選んで空白（0）にする
+        if self.n_blanks > 0:
+            blank_positions = np.random.choice(self.n_size, size=self.n_blanks, replace=False)
+            puzzle[blank_positions] = 0
+        return puzzle
+
+    def _create_solution(self):
+        """
+        正解を作成
+        """
+        # まず完全な解（1からn_sizeまでの順列）を作成
+        solution = np.arange(1, self.n_size + 1, dtype=np.int32)
+        # ランダムにシャッフル
+        np.random.shuffle(solution)
+        return solution

@@ -9,17 +9,19 @@ class MaskSudoku1dEnv(Sudoku1dEnv):
     初期状態で配置されている数字は変更できない制約
     """
 
-    def __init__(self, n_size: int, n_max_steps: int, enable_mask: bool = True):
+    def __init__(self, n_size: int, n_blanks: int, n_max_steps: int, enable_mask: bool = True):
         """
         マスク付きOne Max環境の初期化
 
         Args:
             n_size (int): 数独のサイズ（1からn_sizeまでの数字を使用、0は空白）
+            n_blanks (int): 初期状態で作る空白マスの数
             n_max_steps (int): 最大ステップ数
             enable_mask (bool): マスクを有効にするか
         """
         super().__init__(
             n_size,
+            n_blanks,
             n_max_steps,
         )
         self.enable_mask = enable_mask  # マスクを有効にするか

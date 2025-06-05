@@ -4,6 +4,7 @@ class Settings:
 
     # 環境設定
     N_SIZE = 4  # 数独のサイズ（1からn_sizeまでの数字を使用、0は空白）
+    N_BLANKS = 2  # 初期状態で作る空白マスの数
     ENABLE_MASK = False  # True: マスクを有効にする, False: マスクを無効にする
 
     # 訓練設定

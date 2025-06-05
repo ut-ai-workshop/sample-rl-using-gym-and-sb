@@ -150,6 +150,7 @@ if __name__ == "__main__":
     def env_func() -> ActionMasker:
         env = MaskSudoku1dEnv(
             n_size=Settings.N_SIZE,
+            n_blanks=Settings.N_BLANKS,
             n_max_steps=Settings.N_MAX_STEPS,
             enable_mask=Settings.ENABLE_MASK,
         )
