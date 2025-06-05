@@ -1,5 +1,5 @@
 import os
-from typing import Any
+from typing import Any, Callable
 
 import numpy as np
 import torch
@@ -12,7 +12,7 @@ from mask_env import MaskOneMaxEnv
 from settings import Settings
 
 
-class OneMaxTester:
+class Tester:
     def __init__(self, log_dir: str) -> None:
         """
         コンストラクタ
@@ -25,7 +25,7 @@ class OneMaxTester:
         # ログディレクトリの作成
         os.makedirs(self._log_dir, exist_ok=True)
 
-    def _create_vec_env(self, env: MaskOneMaxEnv) -> VecEnv:
+    def _create_vec_env(self, env_func: Callable) -> VecEnv:
         """
         ベクトル化環境の作成
 
@@ -35,8 +35,7 @@ class OneMaxTester:
         Returns:
             VecEnv: ベクトル化環境
         """
-        mask_env = ActionMasker(env, env.action_mask_func)
-        monitor = Monitor(mask_env)
+        monitor = Monitor(env_func())
         vec_env = DummyVecEnv([lambda: monitor])
         return vec_env
 
@@ -74,7 +73,7 @@ class OneMaxTester:
             except Exception as backup_e:
                 raise FileNotFoundError("No trained model found. Please run train.py first.")
 
-    def run_episode(self, model: MaskablePPO, base_env: MaskOneMaxEnv, deterministic: bool = True, verbose: bool = True) -> dict[str, Any]:
+    def run_episode(self, model: MaskablePPO, base_env: Any, deterministic: bool = True, verbose: bool = True) -> dict[str, Any]:
         """
         1エピソードを実行して結果を返す
 
@@ -87,6 +86,7 @@ class OneMaxTester:
         Returns:
             Dict[str, Any]: エピソード結果
         """
+
         obs, _ = base_env.reset()
 
         if verbose:
@@ -146,19 +146,19 @@ class OneMaxTester:
             "reward_history": reward_history,
         }
 
-    def test(self, test_env: MaskOneMaxEnv, num_tests: int = 100, model_path: str = "") -> None:
+    def test(self, env_func: Callable, num_tests: int = 100, model_path: str = "") -> None:
         """
         テストの実行
 
         Args:
-            test_env (MaskOneMaxEnv): テスト用環境
+            test_env (Any): テスト用環境
             num_tests (int, optional): テスト回数
             model_path (str, optional): モデルファイルのパス
         """
         print(f"\n=== One Max Problem Solver ===")
 
         # テスト用環境の作成
-        vec_env = self._create_vec_env(test_env)
+        vec_env = self._create_vec_env(env_func)
 
         # 学習済みモデルの読み込み
         model = self._load_model(vec_env, model_path)
@@ -167,11 +167,12 @@ class OneMaxTester:
         print(f"\n=== Multiple Test Runs ===")
         results = []
 
+        base_env = env_func(is_wrap=False)
         for i in range(num_tests):
             print(f"\n\n--- Test Run {i+1}/{num_tests} ---")
             result = self.run_episode(
                 model,
-                test_env,
+                base_env,
                 deterministic=True,
                 verbose=True,
             )
@@ -207,16 +208,22 @@ class OneMaxTester:
 
 if __name__ == "__main__":
     # 環境設定
-    test_env = MaskOneMaxEnv(
-        n_bits=Settings.N_BITS,
-        initial_ones_ratio=Settings.INITIAL_ONES_RATIO,
-        n_max_steps=Settings.N_MAX_STEPS,
-        enable_mask=Settings.ENABLE_MASK,
-    )
+
+    def env_func(is_wrap: bool = True) -> Any:
+        env = MaskOneMaxEnv(
+            n_bits=Settings.N_BITS,
+            initial_ones_ratio=Settings.INITIAL_ONES_RATIO,
+            n_max_steps=Settings.N_MAX_STEPS,
+            enable_mask=Settings.ENABLE_MASK,
+        )
+        if is_wrap:
+            return ActionMasker(env, env.action_mask_func)
+        else:
+            return env
 
     # テスト実行
-    tester = OneMaxTester(log_dir=Settings.LOG_DIR)
+    tester = Tester(log_dir=Settings.LOG_DIR)
     tester.test(
-        test_env=test_env,
+        env_func=env_func,
         num_tests=Settings.N_TEST_EPISODES,
     )

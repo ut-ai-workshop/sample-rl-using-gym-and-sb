@@ -7,7 +7,7 @@ import numpy as np
 from settings import Settings
 
 
-class OneMaxPlotter:
+class Plotter:
     def __init__(self, log_dir: str) -> None:
         """
         コンストラクタ
@@ -240,7 +240,7 @@ class OneMaxPlotter:
 
 if __name__ == "__main__":
     # プロッター実行
-    plotter = OneMaxPlotter(log_dir=Settings.LOG_DIR)
+    plotter = Plotter(log_dir=Settings.LOG_DIR)
     plotter.plot(
         n_eval_freq=Settings.N_EVAL_FREQ,
         n_eval_episodes=Settings.N_EVAL_EPISODES,

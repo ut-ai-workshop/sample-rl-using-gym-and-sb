@@ -10,7 +10,7 @@ from mask_env import MaskOneMaxEnv
 from settings import Settings
 
 
-class OneMaxParallelTrainer:
+class ParallelTrainer:
     def __init__(self, log_dir: str) -> None:
         """
         コンストラクタ
@@ -30,13 +30,12 @@ class OneMaxParallelTrainer:
         Args:
             n_envs (int): 並列環境数
             log_filename (str): ログファイル名
-            n_bits (int): ビット数
             env_func (Callable): 環境作成関数
 
         Returns:
             VecMonitor: 並列ベクトル化環境
         """
-        env_fns = [env_func for _ in range(n_envs)]
+        env_fns = [lambda: env_func() for _ in range(n_envs)]
         vec_env = SubprocVecEnv(env_fns)
         vec_monitor = VecMonitor(vec_env, log_filename)
         return vec_monitor
@@ -71,6 +70,7 @@ class OneMaxParallelTrainer:
 
         Args:
             train_env (VecMonitor): 訓練環境
+            n_train_envs (int): 訓練環境数
 
         Returns:
             MaskablePPO: モデル
@@ -93,10 +93,7 @@ class OneMaxParallelTrainer:
         並列訓練
 
         Args:
-            n_bits (int): ビット数
-            initial_ones_ratio (float): 初期状態での1の比率
-            n_max_steps (int): 最大ステップ数
-            enable_mask (bool): マスクを有効にするか
+            env_func (Callable): 環境作成関数
             train_steps (int): 訓練ステップ数
             n_eval_freq (int): 評価頻度
             n_eval_episodes (int): 評価エピソード数
@@ -148,7 +145,7 @@ class OneMaxParallelTrainer:
 
 if __name__ == "__main__":
 
-    def env_func():
+    def env_func() -> ActionMasker:
         env = MaskOneMaxEnv(
             n_bits=Settings.N_BITS,
             initial_ones_ratio=Settings.INITIAL_ONES_RATIO,
@@ -158,7 +155,7 @@ if __name__ == "__main__":
         return ActionMasker(env, env.action_mask_func)
 
     # 訓練実行
-    trainer = OneMaxParallelTrainer(log_dir=Settings.LOG_DIR)
+    trainer = ParallelTrainer(log_dir=Settings.LOG_DIR)
     trainer.train(
         env_func=env_func,
         train_steps=Settings.N_TRAIN_STEPS,
