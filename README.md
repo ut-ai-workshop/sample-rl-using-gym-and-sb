@@ -28,13 +28,19 @@ cp settings.sample.py settings.py
 python train.py
 ```
 
-## Plot training progress
+or
+
+```bash
+python train_parallel.py
+```
+
+### Plot training progress
 
 ```bash
 python plot.py
 ```
 
-## Test
+### Test
 
 ```bash
 python test.py
