@@ -33,7 +33,8 @@ class Sudoku1dEnv(gym.Env):
         # 行動空間: n_sizeの位置
         self.action_space = spaces.Discrete(n_size)
         # 観測空間: 0からn_sizeまでの整数値（0は空白）
-        self.observation_space = spaces.Box(low=0, high=n_size, shape=(n_size,), dtype=np.int32)
+        obs_dim = n_size * (n_size + 1)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(obs_dim,), dtype=np.float32)
 
     def reset(self, *, seed: int | None = None, options: dict | None = None):
         """
@@ -52,7 +53,7 @@ class Sudoku1dEnv(gym.Env):
         self.numbers = self._create_puzzle()
         self.initial_numbers = deepcopy(self.numbers)
 
-        obs = self.numbers.copy()
+        obs = self._to_one_hot(self.numbers)
         return obs, {}
 
     def step(self, action: int):
@@ -80,17 +81,17 @@ class Sudoku1dEnv(gym.Env):
             reward += 10.0
         elif self.step_count >= self.n_max_steps:
             # ステップ上限に達した場合、達成度に応じた報酬を与え、エピソード終了
-            reward += 10 - len(self._get_missing_numbers())
+            reward += len(self._get_unique_numbers())
             terminated = True
 
-        obs = self.numbers.copy()
+        obs = self._to_one_hot(self.numbers)
         return obs, reward, terminated, truncated, {}
 
     def render(self):
         """
         現在の状態を表示
         """
-        unique_count = self._count_unique_numbers()
+        unique_count = len(self._get_unique_numbers())
         duplicates = self._get_duplicates()
         missing = self._get_missing_numbers()
         print(f"Step {self.step_count}: [{','.join(map(str, self.numbers))}]")
@@ -106,7 +107,7 @@ class Sudoku1dEnv(gym.Env):
         Returns:
             float: 完了した割合 (0~100)
         """
-        return self._count_unique_numbers() / self.n_size * 100
+        return len(self._get_unique_numbers()) / self.n_size * 100
 
     def check_is_completed(self):
         """
@@ -117,14 +118,16 @@ class Sudoku1dEnv(gym.Env):
         """
         return len(np.unique(self.numbers)) == self.n_size and np.min(self.numbers) == 1 and np.max(self.numbers) == self.n_size
 
-    def _count_unique_numbers(self):
+    def _get_unique_numbers(self):
         """
-        重複のない数字の数を数える
+        重複のない数字のリストを取得
 
         Returns:
-            int: 重複のない数字の数
+            list: 重複のない数字のリスト
         """
-        return len(np.unique(self.numbers))
+        unique, counts = np.unique(self.numbers, return_counts=True)
+        uniques = [int(u) for u, c in zip(unique, counts) if u != 0 and c == 1]
+        return uniques
 
     def _get_duplicates(self):
         """
@@ -170,3 +173,18 @@ class Sudoku1dEnv(gym.Env):
         # ランダムにシャッフル
         np.random.shuffle(solution)
         return solution
+
+    def _to_one_hot(self, numbers):
+        """
+        数字配列をone-hotエンコーディングに変換
+
+        Args:
+            numbers (np.ndarray): 数字配列
+
+        Returns:
+            np.ndarray: one-hot エンコーディングされた配列 (n_size, n_size + 1)
+        """
+        one_hot = np.zeros((self.n_size, self.n_size + 1), dtype=np.float32)
+        for i, num in enumerate(numbers):
+            one_hot[i, num] = 1.0
+        return one_hot.flatten()
