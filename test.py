@@ -208,7 +208,6 @@ class Tester:
 
 if __name__ == "__main__":
     # 環境設定
-
     def env_func(is_wrap: bool = True) -> Any:
         env = MaskOneMaxEnv(
             n_bits=Settings.N_BITS,

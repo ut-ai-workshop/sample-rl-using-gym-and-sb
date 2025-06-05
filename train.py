@@ -112,7 +112,7 @@ class Trainer:
 
 
 if __name__ == "__main__":
-
+    # 環境設定
     def env_func() -> ActionMasker:
         env = MaskOneMaxEnv(
             n_bits=Settings.N_BITS,
