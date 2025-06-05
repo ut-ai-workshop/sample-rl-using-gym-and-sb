@@ -133,8 +133,8 @@ class Sudoku1dEnv(gym.Env):
             list: 重複している数字のリスト
         """
         unique, counts = np.unique(self.numbers, return_counts=True)
-        duplicates = unique[counts > 1]
-        return duplicates.tolist()
+        duplicates = [int(u) for u, c in zip(unique, counts) if u != 0 and c > 1]
+        return duplicates
 
     def _get_missing_numbers(self):
         """
