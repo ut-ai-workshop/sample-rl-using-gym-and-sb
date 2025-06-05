@@ -64,12 +64,13 @@ class ParallelTrainer:
         )
         return eval_callback
 
-    def _create_model(self, train_env: VecMonitor, n_train_envs: int) -> MaskablePPO:
+    def _create_model(self, train_env: VecMonitor, n_max_steps: int, n_train_envs: int) -> MaskablePPO:
         """
         モデルの作成
 
         Args:
             train_env (VecMonitor): 訓練環境
+            n_max_steps (int): 1エピソードの最大ステップ数
             n_train_envs (int): 訓練環境数
 
         Returns:
@@ -78,7 +79,7 @@ class ParallelTrainer:
         model = MaskablePPO(
             "MlpPolicy",
             train_env,
-            n_steps=1024 // n_train_envs,
+            n_steps=(n_max_steps * 50) // n_train_envs,
             batch_size=128,
             clip_range=0.2,
             learning_rate=3e-4,
@@ -88,13 +89,14 @@ class ParallelTrainer:
         )
         return model
 
-    def train(self, env_func: Callable, train_steps: int, n_eval_freq: int, n_eval_episodes: int, n_train_envs: int, n_eval_envs: int = 3) -> None:
+    def train(self, env_func: Callable, train_steps: int, n_max_steps: int, n_eval_freq: int, n_eval_episodes: int, n_train_envs: int, n_eval_envs: int = 3) -> None:
         """
         並列訓練
 
         Args:
             env_func (Callable): 環境作成関数
             train_steps (int): 訓練ステップ数
+            n_max_steps (int): 1エピソードの最大ステップ数
             n_eval_freq (int): 評価頻度
             n_eval_episodes (int): 評価エピソード数
             n_train_envs (int): 訓練環境数
@@ -125,7 +127,7 @@ class ParallelTrainer:
         )
 
         # モデルの作成
-        model = self._create_model(train_env=train_env, n_train_envs=n_train_envs)
+        model = self._create_model(train_env=train_env, n_max_steps=n_max_steps, n_train_envs=n_train_envs)
 
         # 学習開始
         print(f"Total timesteps: {train_steps}")
@@ -159,6 +161,7 @@ if __name__ == "__main__":
     trainer.train(
         env_func=env_func,
         train_steps=Settings.N_TRAIN_STEPS,
+        n_max_steps=Settings.N_MAX_STEPS,
         n_eval_freq=Settings.N_EVAL_FREQ,
         n_eval_episodes=Settings.N_EVAL_EPISODES,
         n_train_envs=Settings.N_TRAIN_ENVS,

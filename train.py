@@ -62,12 +62,13 @@ class Trainer:
         )
         return eval_callback
 
-    def _create_model(self, env_func: Callable) -> MaskablePPO:
+    def _create_model(self, env_func: Callable, n_max_steps: int) -> MaskablePPO:
         """
         モデルの作成
 
         Args:
             env_func (Callable): 環境作成関数
+            n_max_steps (int): 1エピソードの最大ステップ数
 
         Returns:
             MaskablePPO: モデル
@@ -75,7 +76,7 @@ class Trainer:
         model = MaskablePPO(
             "MlpPolicy",
             self._create_vec_env(log_filename=f"{self._log_dir}/train", env_func=env_func),
-            n_steps=1024,
+            n_steps=n_max_steps * 50,
             batch_size=128,
             clip_range=0.2,
             learning_rate=3e-4,
@@ -85,13 +86,14 @@ class Trainer:
         )
         return model
 
-    def train(self, env_func: Callable, train_steps: int, n_eval_freq: int, n_eval_episodes: int) -> None:
+    def train(self, env_func: Callable, train_steps: int, n_max_steps: int, n_eval_freq: int, n_eval_episodes: int) -> None:
         """
         訓練
 
         Args:
             env_func (Callable): 環境作成関数
             train_steps (int): 訓練ステップ数
+            n_max_steps (int): 1エピソードの最大ステップ数
             n_eval_freq (int): 評価頻度
             n_eval_episodes (int): 評価エピソード数
         """
@@ -101,7 +103,7 @@ class Trainer:
             n_eval_freq=n_eval_freq,
             n_eval_episodes=n_eval_episodes,
         )
-        model = self._create_model(env_func=env_func)
+        model = self._create_model(env_func=env_func, n_max_steps=n_max_steps)
         model.learn(
             total_timesteps=train_steps,
             progress_bar=True,
@@ -127,6 +129,7 @@ if __name__ == "__main__":
     trainer.train(
         env_func=env_func,
         train_steps=Settings.N_TRAIN_STEPS,
+        n_max_steps=Settings.N_MAX_STEPS,
         n_eval_freq=Settings.N_EVAL_FREQ,
         n_eval_episodes=Settings.N_EVAL_EPISODES,
     )
